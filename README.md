@@ -1,3 +1,4 @@
+```
 Following instructions and commands are for Mac. Pls let me know if you wish to run on Windows as there might be a few additional steps.
 
 1)	This application requires Spark version 2.3.0, Python 2.7.10 and Cement-2.10.2.
@@ -9,7 +10,7 @@ Following instructions and commands are for Mac. Pls let me know if you wish to 
 4)	Through the command line navigate to above project folder
 5)	Type ls -l on command prompt, you should see these 2 files - logparser.py and test-access.log
 6)	Steps to run the application, on the command line type the following 4 commands:
-	i) python logparser.py ––help
+    i) python logparser.py ––help
 	      Above command will give you information about sub commands to run the application
     ii) python logparser.py ps
 		  Above command will plot a histogram of all HTTP statuses
@@ -24,7 +25,6 @@ spark = SparkSession.builder.appName("LogParser").getOrCreate()
 
 For Windows User, Comment line 116 and uncomment line 117 as shown below,
 spark = SparkSession.builder.config("spark.sql.warehouse.dir", "file:///C:/temp").appName("LogParser").getOrCreate()
-
 Output:
 i) python logparser.py ––help
     My Application parse access logs!
@@ -71,3 +71,4 @@ iv) python logparser.py mm
         +------------------+
 
     Median Request Time = 0.001
+```   
