@@ -29,15 +29,29 @@ class MyAppBaseController(CementBaseController):
 
         logDataset = self.command_Part_4()
 
+        ''' creating dataframe by selecting the http status field '''
         httpStatus = logDataset.selectExpr("cast(status as int) status")
+
+        ''' registering dataframe as temp table '''
         httpStatus.createOrReplaceTempView("statusFrame")
+
+        ''' selecting records where http status field is populated '''
         df = spark.sql("SELECT * FROM statusFrame WHERE status is NOT NULL")
         m_list = df.selectExpr("status as status")
+
+        ''' creating an array of http status '''
         status_arr = [int(i.status) for i in m_list.collect()]
 
-        plt.hist(status_arr, bins=100)
+        ''' Plotting histogram with http status '''
+        plt.hist(status_arr, bins=150)
+
+        ''' labelling x-axis '''
         plt.xlabel('HTTP status')
+
+        ''' labelling y-axis '''
         plt.ylabel('Frequency')
+
+        ''' giving title to the histogram '''
         plt.title(r'Histogram of HTTP Status')
         plt.grid(True)
         plt.show()
@@ -50,6 +64,7 @@ class MyAppBaseController(CementBaseController):
 
         logDataset = self.command_Part_4()
 
+        '''Creating dataframe by extracting request time field and sorting it in decreasing order and printing top 10 request times'''
         logDataset.selectExpr("cast(time as float) time"). \
             orderBy("time", ascending=False). \
             withColumnRenamed("time", "10 Largest Request Time"). \
@@ -63,43 +78,54 @@ class MyAppBaseController(CementBaseController):
 
         logDataset = self.command_Part_4()
 
+        ''' Creating dataframe by extracting request time field and sorting it in increasing order '''
         timeSorted = logDataset.selectExpr("cast(time as float) time").orderBy("time", ascending=True)
+
+        ''' Calculating mean request time and printing it '''
         timeSorted.agg({"time": "avg"}).withColumnRenamed("avg(time)", "Mean Request Time").show()
 
+        ''' counting number of records '''
         cnt = timeSorted.select("time").count()
+
+        ''' assigning index and generating rdd with key value pair '''
         rdd = timeSorted.rdd.zipWithIndex()
+
+        ''' flipping the rdd '''
         flipped = rdd.map(lambda (x, y): (y, x))
 
         if (cnt % 2 == 0):
             left = cnt / 2 - 1
             right = left + 1
-            x = (flipped.lookup(left) + flipped.lookup(right)) / 2
-            for x1 in x:
-                print ("Media Request Time = %.3f" % x1[0])
+            ''' calculating median for rdds that has even number of records'''
+            x = (flipped.lookup(left)[0].time + flipped.lookup(right)[0].time) / 2
+            print ("Median Request Time = %.3f" % x)
         else:
             y = flipped.lookup(cnt / 2)
-            for y1 in y:
-                print ("Median Request Time = %.3f" % y1[0])
+            ''' calculating median for rdds that has odd number of records '''
+            print ("Median Request Time = %.3f" % flipped.lookup(cnt / 2)[0].time)
 
-        '''timeSorted.groupBy('time').\
-                 agg(F.size(F.collect_list('time'))).\
-                 withColumnRenamed("size(collect_list(time))","timeCount").show()'''
         spark.stop()
 
     @expose(hide=True, aliases=['cmd4'], help="this command gets called by everyone but will not be exposed to user")
     def command_Part_4(self):
-        # Create a SparkSession (Note, the config section is only for Windows)
-        global spark
-        spark = SparkSession.builder.appName("LogHistogram").getOrCreate()
 
+        global spark
+
+        ''' Create a SparkSession (Note, the config section is only for Windows)
+            Windows user comment the next line and uncomment next to next line '''
+        spark = SparkSession.builder.appName("LogParser").getOrCreate()
+        # spark = SparkSession.builder.config("spark.sql.warehouse.dir", "file:///C:/temp").appName("LogParser").getOrCreate()
+
+        ''' Parsing the input file'''
         def mapper(line):
             fields = line.split()
             return Row(time=unicodedata.normalize('NFKD', fields[6]).encode('ascii', 'ignore'), status=fields[10])
 
+        ''' Reading the input file '''
         lines = spark.sparkContext.textFile("test-access.log")
         logs = lines.map(mapper)
 
-        # Convert that to a DataFrame
+        ''' Convert rdd to a DataFrame '''
         return spark.createDataFrame(logs).cache()
 
 class MyApp(CementApp):
